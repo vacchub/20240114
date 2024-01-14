@@ -1,0 +1,59 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define NBUFS       16 
+struct buff {
+    struct buff *bf_forw;   /* forward pointer      */
+    struct buff *bf_back;   /* backward pointer     */
+    int data;
+};
+short nbuffs = NBUFS;
+struct buff *buffs;
+struct buff avbuffs;
+int g_value=5;
+void bfinit();
+struct buff *bfgetblk();
+void bfrelease(struct buff *bp);
+
+int main()
+{
+    struct buff *bp;
+    int i;
+    bfinit();
+    for (i=0; i < nbuffs; i++) {
+        bp = bfgetblk();    printf("data[%d]\n", bp->data);
+    }
+    return 0;
+}
+
+void bfinit()
+{
+    struct buff *bp;
+    int i;
+    avbuffs.bf_forw = avbuffs.bf_back = &avbuffs; /* set up avail list */
+    buffs = (struct buff *) malloc(nbuffs*sizeof(struct buff));
+    bp = &buffs[0];
+    for (i=0; i < nbuffs; i++, bp++) {
+        bp->data = g_value++;
+        bfrelease(bp);
+    }
+}
+
+struct buff *bfgetblk()
+{
+    struct buff *bp;
+    bp = avbuffs.bf_back;           /* get available buffer */
+    if (bp == &avbuffs)
+        printf("no more buffers\n");
+    bp->bf_back->bf_forw = bp->bf_forw; /* unlink from avail list */
+    bp->bf_forw->bf_back = bp->bf_back;
+    return(bp);
+}
+
+void bfrelease(struct buff *bp)
+{
+    bp->bf_forw = avbuffs.bf_forw;      /* link to avail list   */
+    bp->bf_forw->bf_back = bp;
+    avbuffs.bf_forw = bp;
+    bp->bf_back = &avbuffs;
+}
